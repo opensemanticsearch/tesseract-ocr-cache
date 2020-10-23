@@ -19,6 +19,7 @@ import sys
 import subprocess
 import tempfile
 import codecs
+from typing import Optional
 
 
 def get_cache_filename(filename,
@@ -69,8 +70,6 @@ def get_ocr_text(filename,
 
     options = '-l ' + lang
 
-    is_cached = False
-
     if not cache_dir:
         # calc tempfilename from temp dir, process id and filename
         md5hash = hashlib.md5(filename.encode('utf-8')).hexdigest()
@@ -85,55 +84,56 @@ def get_ocr_text(filename,
         output_filename = (cache_dir + 'temp-' + str(os.getpid()) +
                            '-' + cache_filename)
         ocr_filename = cache_dir + cache_filename
-
-        if os.path.isfile(ocr_filename):
-
-            is_cached = True
-
+        try:
+            text = readfile(ocr_filename, verbose)
             if verbose:
                 print("Using OCR result for content of {} from cache {}"
                       .format(filename, ocr_filename))
+            return text
+        except FileNotFoundError:
+            pass
 
-    # if not cached, run OCR
-    if not is_cached:
+    argv = ['tesseract',
+            filename,
+            output_filename,
+            '-l', lang,
+            '--user-words', '/etc/opensemanticsearch/ocr/dictionary.txt'
+            ]
 
-        argv = ['tesseract',
-                filename,
-                output_filename,
-                '-l', lang,
-                '--user-words', '/etc/opensemanticsearch/ocr/dictionary.txt'
-                ]
+    if cache_dir and verbose:
+        print("OCR result not in cache, running"
+              " Tesseract OCR by arguments {}"
+              .format(argv))
 
-        if cache_dir:
-            if verbose:
-                print("OCR result not in cache, running"
-                      " Tesseract OCR by arguments {}"
-                      .format(argv))
+    # run tesseract
+    result_code = subprocess.call(argv)
 
-        # run tesseract
-        result_code = subprocess.call(argv)
+    if result_code != 0:
+        text = "Error: OCR failed for {}\n".format(filename)
+        sys.stderr.write(text)
 
-        if result_code != 0:
-            text = "Error: OCR failed for {}\n".format(filename)
-            sys.stderr.write(text)
+    # move temporary filename to cache filename
+    if cache_dir:
+        os.rename(output_filename + '.txt', ocr_filename)
 
-        # move temporary filename to cache filename
-        if cache_dir:
-            os.rename(output_filename + '.txt', ocr_filename)
+    try:
+        text = readfile(ocr_filename, verbose)
+    except FileNotFoundError:
+        pass
+    # delete temporary OCR result file if no cache configured
+    if not cache_dir:
+        os.remove(ocr_filename)
 
-    #
-    # read text from OCR result file
-    #
-    if os.path.isfile(ocr_filename):
-        with codecs.open(ocr_filename, "r", encoding="utf-8") as ocr_file:
-            text = ocr_file.read()
+    return text
 
-        if verbose:
-            print("Characters recognized: {}".format(len(text)))
 
-        # delete temporary OCR result file if no cache configured
-        if not cache_dir:
-            os.remove(ocr_filename)
+def readfile(filename, verbose) -> Optional[str]:
+    """read text from OCR result file"""
+    with codecs.open(filename, "r", encoding="utf-8") as ocr_file:
+        text = ocr_file.read()
+
+    if verbose:
+        print("Characters recognized: {}".format(len(text)))
 
     return text
 

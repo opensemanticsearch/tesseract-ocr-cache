@@ -6,17 +6,15 @@ import sys
 
 from tesseract_cache import tesseract_cache
 
-#
-# Wrapper for tesseract command line interface
-#
-# if result output file in cache, copy from cache, else return fake
-# OCR result with status
-#
-
 
 def tesseract_cli_wrapper(argv,
                           cache_dir='/var/cache/tesseract',
                           verbose=True):
+    """Wrapper for tesseract command line interface
+
+    if result output file in cache, copy from cache, else return fake
+    OCR result with status
+    """
 
     if os.getenv('TESSERACT_CACHE_DIR'):
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')

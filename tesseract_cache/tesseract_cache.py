@@ -1,13 +1,16 @@
 #!/usr/bin/python3
 
-# Tesseract cache
-# so once processed OCR results can be read from cache
+"""Tesseract cache
+so once processed OCR results can be read from cache
 
-# Python library:
-# If used as library in python software by import, you can use get_ocr_text() to start OCR and get the text
+Python library:
+If used as library in python software by import, you can use get_ocr_text() to
+start OCR and get the text
 
-# CLI wrapper
-# If used as tesseract command line interface (calling __main__) the wrapper function tesseract_cli_wrapper() is used
+CLI wrapper
+If used as tesseract command line interface (calling __main__) the wrapper
+function tesseract_cli_wrapper() is used
+"""
 
 import hashlib
 import os
@@ -18,17 +21,16 @@ import tempfile
 import codecs
 
 
-#
-# calc filename in cache dir by file content and tesseract options (hashes),
-# not filename so cache will be used, too if multiple files of the same image
-# and if using temprorary filenames like Tika-Server
-#
-
 def get_cache_filename(filename,
                        lang,
                        tesseract_configfilename,
                        options,
                        verbose=True):
+    """calc filename in cache dir by file content and tesseract
+    options (hashes),
+    not filename so cache will be used, too if multiple files of the same image
+    and if using temprorary filenames like Tika-Server
+    """
 
     # hash of file content
     imagefile = open(filename, 'rb')
@@ -42,17 +44,16 @@ def get_cache_filename(filename,
 
     return cache_filename
 
-#
-# Get text from image
-#
-# If enabled cache and text available in cache, read from cache, else do OCR and write to cache
-#
-
 
 def get_ocr_text(filename,
                  lang='eng',
                  cache_dir='/var/cache/tesseract',
                  verbose=True):
+    """Get text from image
+
+    If enabled cache and text available in cache, read from cache,
+    else do OCR and write to cache
+    """
 
     text = ''
     ocr_filename = None
@@ -139,12 +140,10 @@ def get_ocr_text(filename,
     return text
 
 
-#
-# Parse the parameters of tesseract cli wrapper call
-# and return filename, options and cache filename
-#
-
 def parse_tesseract_parameters(argv, verbose=True):
+    """Parse the parameters of tesseract cli wrapper call
+    and return filename, options and cache filename
+    """
 
     input_filename = argv[1]
 
@@ -179,15 +178,14 @@ def parse_tesseract_parameters(argv, verbose=True):
     return input_filename, tesseract_configfilename, cache_filename
 
 
-#
-# Wrapper for tesseract command line interface
-#
-# if result output file in cache, copy from cache, else run tesseract and copy to cache
-#
-
 def tesseract_cli_wrapper(argv,
                           cache_dir='/var/cache/tesseract',
                           verbose=True):
+    """Wrapper for tesseract command line interface
+
+    if result output file in cache, copy from cache, else run tesseract
+    and copy to cache
+    """
 
     if os.getenv('TESSERACT_CACHE_DIR'):
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')

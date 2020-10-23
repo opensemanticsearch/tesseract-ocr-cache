@@ -19,13 +19,14 @@ import sys
 import subprocess
 import tempfile
 import codecs
+import glob
 from typing import Optional
 
 
 def get_cache_filename(filename,
                        lang,
-                       tesseract_configfilename,
                        options,
+                       tesseract_configfilename='txt',
                        verbose=True):
     """calc filename in cache dir by file content and tesseract
     options (hashes),
@@ -57,6 +58,7 @@ def get_ocr_text(filename,
 
     text = ''
     ocr_filename = None
+    options = '-l ' + lang
 
     if not lang:
         lang = 'eng'
@@ -65,25 +67,12 @@ def get_ocr_text(filename,
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')
 
     if cache_dir:
-        if not cache_dir.endswith(os.path.sep):
-            cache_dir += os.path.sep
-
-    options = '-l ' + lang
-
-    if not cache_dir:
-        # calc tempfilename from temp dir, process id and filename
-        md5hash = hashlib.md5(filename.encode('utf-8')).hexdigest()
-        output_filename = tempfile.gettempdir() + os.path.sep + \
-            "opensemanticetl_ocr_" + str(os.getpid()) + md5hash
-        ocr_filename = output_filename + '.txt'
-    else:
         # cache dir configured, so get cache file name
-        cache_filename = get_cache_filename(
-            filename=filename, lang=lang, tesseract_configfilename='txt',
-            options=options, verbose=verbose)
-        output_filename = (cache_dir + 'temp-' + str(os.getpid()) +
-                           '-' + cache_filename)
-        ocr_filename = cache_dir + cache_filename
+        ocr_filename = get_cache_filename_multilang(
+            filename=filename, lang=lang,
+            options=options, cache_dir=cache_dir)
+        output_filename = os.path.join(cache_dir, 'temp-' + str(os.getpid()) +
+                                       '-' + os.path.basename(ocr_filename))
         try:
             text = readfile(ocr_filename, verbose)
             if verbose:
@@ -92,6 +81,12 @@ def get_ocr_text(filename,
             return text
         except FileNotFoundError:
             pass
+    else:
+        # calc tempfilename from temp dir, process id and filename
+        md5hash = hashlib.md5(filename.encode('utf-8')).hexdigest()
+        output_filename = tempfile.gettempdir() + os.path.sep + \
+            "opensemanticetl_ocr_" + str(os.getpid()) + md5hash
+        ocr_filename = output_filename + '.txt'
 
     argv = ['tesseract',
             filename,
@@ -127,7 +122,7 @@ def get_ocr_text(filename,
     return text
 
 
-def readfile(filename, verbose) -> Optional[str]:
+def readfile(filename, verbose=False) -> Optional[str]:
     """read text from OCR result file"""
     with codecs.open(filename, "r", encoding="utf-8") as ocr_file:
         text = ocr_file.read()
@@ -136,6 +131,32 @@ def readfile(filename, verbose) -> Optional[str]:
         print("Characters recognized: {}".format(len(text)))
 
     return text
+
+
+def get_cache_filename_multilang(filename: str,
+                                 cache_dir: str,
+                                 options: str,
+                                 lang: str = 'eng') -> str:
+    suffix = get_cache_filename(filename, lang="", options=options)
+    required_langs = frozenset(lang.split('+')) if lang else frozenset()
+    cache_candidates = glob.iglob(os.path.join(
+        cache_dir, "*" + suffix))
+
+    def provided_langs(candidate):
+        return frozenset(os.path.basename(
+            candidate).split('-', 1)[0].split('+'))
+    # Find candidates providing all required langs:
+    matching_candidates = (
+        candidate for candidate in cache_candidates
+        if required_langs.issubset(
+            provided_langs(candidate)
+        )
+    )
+    # Take the candidate with the shortest filename
+    # (this will contain the minimal amount of not required langs):
+    ocr_cache_filename = min(matching_candidates, key=len, default=None)
+    # Fall back to a naive file name:
+    return ocr_cache_filename or os.path.join(cache_dir, lang + suffix)
 
 
 def parse_tesseract_parameters(argv, verbose=True):

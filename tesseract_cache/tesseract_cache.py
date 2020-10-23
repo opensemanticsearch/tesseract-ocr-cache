@@ -33,9 +33,8 @@ def get_cache_filename(filename,
     """
 
     # hash of file content
-    imagefile = open(filename, 'rb')
-    hash_filecontent = hashlib.sha256(imagefile.read()).hexdigest()
-    imagefile.close()
+    with open(filename, 'rb') as imagefile:
+        hash_filecontent = hashlib.sha256(imagefile.read()).hexdigest()
 
     hash_options = hashlib.md5(options.encode('utf8')).hexdigest()
 
@@ -126,9 +125,8 @@ def get_ocr_text(filename,
     # read text from OCR result file
     #
     if os.path.isfile(ocr_filename):
-        ocr_file = codecs.open(ocr_filename, "r", encoding="utf-8")
-        text = ocr_file.read()
-        ocr_file.close()
+        with codecs.open(ocr_filename, "r", encoding="utf-8") as ocr_file:
+            text = ocr_file.read()
 
         if verbose:
             print("Characters recognized: {}".format(len(text)))

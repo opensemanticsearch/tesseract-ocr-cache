@@ -40,9 +40,8 @@ def tesseract_cli_wrapper(argv,
               " result with status info to {}".format(
                   output_filename))
 
-    textfile = open(output_filename, 'w')
-    textfile.write('[Image (no OCR yet)]')
-    textfile.close()
+    with open(output_filename, 'w') as textfile:
+        textfile.write('[Image (no OCR yet)]')
 
     return 0
 

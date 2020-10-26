@@ -19,21 +19,19 @@ def tesseract_cli_wrapper(argv,
     if os.getenv('TESSERACT_CACHE_DIR'):
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')
 
-    if not cache_dir.endswith(os.path.sep):
-        cache_dir += os.path.sep
-
     (input_filename, tesseract_configfilename,
      cache_filename) = tesseract_cache.parse_tesseract_parameters(
         argv, verbose=verbose)
 
     output_filename = argv[2] + '.' + tesseract_configfilename
 
-    if os.path.isfile(cache_dir + cache_filename):
+    cache_file_path = os.path.join(cache_dir, cache_filename)
+    if os.path.isfile(cache_file_path):
         if verbose:
             print("Copying OCR result for content of {} from cache {}".format(
                 input_filename, cache_filename))
         # copy cached result to output filename
-        shutil.copy(cache_dir + cache_filename, output_filename)
+        shutil.copy(cache_file_path, output_filename)
         return 0
     if verbose:
         print("OCR result not in cache, writing fake OCR"

@@ -84,8 +84,9 @@ def get_ocr_text(filename,
     else:
         # calc tempfilename from temp dir, process id and filename
         md5hash = hashlib.md5(filename.encode('utf-8')).hexdigest()
-        output_filename = tempfile.gettempdir() + os.path.sep + \
-            "opensemanticetl_ocr_" + str(os.getpid()) + md5hash
+        output_filename = os.path.join(
+            tempfile.gettempdir(),
+            "opensemanticetl_ocr_" + str(os.getpid()) + md5hash)
         ocr_filename = output_filename + '.txt'
 
     argv = ['tesseract',
@@ -209,21 +210,19 @@ def tesseract_cli_wrapper(argv,
     if os.getenv('TESSERACT_CACHE_DIR'):
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')
 
-    if not cache_dir.endswith(os.path.sep):
-        cache_dir += os.path.sep
-
     (input_filename, tesseract_configfilename,
      cache_filename) = parse_tesseract_parameters(
         argv, verbose=verbose)
+    cache_filepath = os.path.join(cache_dir, cache_filename)
 
     output_filename = argv[2] + '.' + tesseract_configfilename
 
-    if os.path.isfile(cache_dir + cache_filename):
+    if os.path.isfile(cache_filepath):
         if verbose:
             print("Copying OCR result for content of {} from cache {}".format(
                 input_filename, cache_filename))
         # copy cached result to output filename
-        shutil.copy(cache_dir + cache_filename, output_filename)
+        shutil.copy(cache_filepath, output_filename)
         return 0
 
     if verbose:
@@ -237,7 +236,7 @@ def tesseract_cli_wrapper(argv,
         print("Copying OCR result {} to cache {}".format(
             output_filename, cache_dir + cache_filename))
 
-    shutil.copy(output_filename, cache_dir + cache_filename)
+    shutil.copy(output_filename, cache_filepath)
 
     return result_code
 

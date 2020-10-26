@@ -207,22 +207,20 @@ def tesseract_cli_wrapper(argv,
         shutil.copy(cache_dir + cache_filename, output_filename)
         return 0
 
-    else:
+    if verbose:
+        print("OCR result not in cache, running "
+              "Tesseract OCR by arguments {}".format(argv))
 
-        if verbose:
-            print("OCR result not in cache, running "
-                  "Tesseract OCR by arguments {}".format(argv))
+    # run tesseract and copy output file to cache
+    result_code = subprocess.call(argv)
 
-        # run tesseract and copy output file to cache
-        result_code = subprocess.call(argv)
+    if verbose:
+        print("Copying OCR result {} to cache {}".format(
+            output_filename, cache_dir + cache_filename))
 
-        if verbose:
-            print("Copying OCR result {} to cache {}".format(
-                output_filename, cache_dir + cache_filename))
+    shutil.copy(output_filename, cache_dir + cache_filename)
 
-        shutil.copy(output_filename, cache_dir + cache_filename)
-
-        return result_code
+    return result_code
 
 
 #
@@ -233,13 +231,11 @@ def tesseract_cli_wrapper(argv,
 if __name__ == "__main__":
 
     # read command line parameters
-    argv = sys.argv
+    _argv = sys.argv
     # since runned on command line instead beeing used as Python library
     # the option argv[0] is not tesseract command but this wrapper
     # so change in new argv for OCR the command parameter to real tesseract
-    argv[0] = 'tesseract'
+    _argv[0] = 'tesseract'
 
     # copy OCR result from cache or run OCR by Tesseract
-    result_code = tesseract_cli_wrapper(argv)
-
-    sys.exit(result_code)
+    sys.exit(tesseract_cli_wrapper(_argv))

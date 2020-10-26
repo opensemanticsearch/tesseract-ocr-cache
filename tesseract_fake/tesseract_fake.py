@@ -35,19 +35,16 @@ def tesseract_cli_wrapper(argv,
         # copy cached result to output filename
         shutil.copy(cache_dir + cache_filename, output_filename)
         return 0
+    if verbose:
+        print("OCR result not in cache, writing fake OCR"
+              " result with status info to {}".format(
+                  output_filename))
 
-    else:
+    textfile = open(output_filename, 'w')
+    textfile.write('[Image (no OCR yet)]')
+    textfile.close()
 
-        if verbose:
-            print("OCR result not in cache, writing fake OCR"
-                  " result with status info to {}".format(
-                      output_filename))
-
-        textfile = open(output_filename, 'w')
-        textfile.write('[Image (no OCR yet)]')
-        textfile.close()
-
-        return 0
+    return 0
 
 
 #
@@ -57,10 +54,7 @@ def tesseract_cli_wrapper(argv,
 
 if __name__ == "__main__":
 
-    # read command line parameters
-    argv = sys.argv
-
     # copy OCR result from cache or run OCR by Tesseract
-    result_code = tesseract_cli_wrapper(argv)
+    result_code = tesseract_cli_wrapper(sys.argv)
 
     sys.exit(result_code)

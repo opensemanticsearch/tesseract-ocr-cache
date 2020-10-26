@@ -20,14 +20,16 @@ import subprocess
 import tempfile
 import codecs
 import glob
+import logging
 from typing import Optional
+
+logger = logging.getLogger("tesseract_cache")
 
 
 def get_cache_filename(filename,
                        lang,
                        options,
-                       tesseract_configfilename='txt',
-                       verbose=True):
+                       tesseract_configfilename='txt'):
     """calc filename in cache dir by file content and tesseract
     options (hashes),
     not filename so cache will be used, too if multiple files of the same image
@@ -48,8 +50,7 @@ def get_cache_filename(filename,
 
 def get_ocr_text(filename,
                  lang='eng',
-                 cache_dir='/var/cache/tesseract',
-                 verbose=True):
+                 cache_dir='/var/cache/tesseract'):
     """Get text from image
 
     If enabled cache and text available in cache, read from cache,
@@ -74,10 +75,9 @@ def get_ocr_text(filename,
         output_filename = os.path.join(cache_dir, 'temp-' + str(os.getpid()) +
                                        '-' + os.path.basename(ocr_filename))
         try:
-            text = readfile(ocr_filename, verbose)
-            if verbose:
-                print("Using OCR result for content of {} from cache {}"
-                      .format(filename, ocr_filename))
+            text = readfile(ocr_filename)
+            logger.debug("Using OCR result for content of %s from cache %s",
+                         filename, ocr_filename)
             return text
         except FileNotFoundError:
             pass
@@ -96,10 +96,10 @@ def get_ocr_text(filename,
             '--user-words', '/etc/opensemanticsearch/ocr/dictionary.txt'
             ]
 
-    if cache_dir and verbose:
-        print("OCR result not in cache, running"
-              " Tesseract OCR by arguments {}"
-              .format(argv))
+    if cache_dir:
+        logger.debug("OCR result not in cache, running"
+                     " Tesseract OCR by arguments %s",
+                     argv)
 
     # run tesseract
     result_code = subprocess.call(argv)
@@ -113,7 +113,7 @@ def get_ocr_text(filename,
         os.rename(output_filename + '.txt', ocr_filename)
 
     try:
-        text = readfile(ocr_filename, verbose)
+        text = readfile(ocr_filename)
     except FileNotFoundError:
         pass
     # delete temporary OCR result file if no cache configured
@@ -123,13 +123,12 @@ def get_ocr_text(filename,
     return text
 
 
-def readfile(filename, verbose=False) -> Optional[str]:
+def readfile(filename) -> Optional[str]:
     """read text from OCR result file"""
     with codecs.open(filename, "r", encoding="utf-8") as ocr_file:
         text = ocr_file.read()
 
-    if verbose:
-        print("Characters recognized: {}".format(len(text)))
+    logger.debug("Characters recognized: %s", len(text))
 
     return text
 
@@ -160,7 +159,7 @@ def get_cache_filename_multilang(filename: str,
     return ocr_cache_filename or os.path.join(cache_dir, lang + suffix)
 
 
-def parse_tesseract_parameters(argv, verbose=True):
+def parse_tesseract_parameters(argv):
     """Parse the parameters of tesseract cli wrapper call
     and return filename, options and cache filename
     """
@@ -174,8 +173,7 @@ def parse_tesseract_parameters(argv, verbose=True):
     lang = 'eng'
     if '-l' in argv:
         lang = argv[argv.index('-l') + 1]
-        if verbose:
-            print("Using Tesseract OCR language parameter: {}".format(lang))
+        logger.debug("Using Tesseract OCR language parameter: %s", lang)
 
     #
     # calc filename in cache dir by file content and options (hash),
@@ -193,14 +191,13 @@ def parse_tesseract_parameters(argv, verbose=True):
     cache_filename = get_cache_filename(
         filename=input_filename, lang=lang,
         tesseract_configfilename=tesseract_configfilename,
-        options=options, verbose=verbose)
+        options=options)
 
     return input_filename, tesseract_configfilename, cache_filename
 
 
 def tesseract_cli_wrapper(argv,
-                          cache_dir='/var/cache/tesseract',
-                          verbose=True):
+                          cache_dir='/var/cache/tesseract'):
     """Wrapper for tesseract command line interface
 
     if result output file in cache, copy from cache, else run tesseract
@@ -211,30 +208,26 @@ def tesseract_cli_wrapper(argv,
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')
 
     (input_filename, tesseract_configfilename,
-     cache_filename) = parse_tesseract_parameters(
-        argv, verbose=verbose)
+     cache_filename) = parse_tesseract_parameters(argv)
     cache_filepath = os.path.join(cache_dir, cache_filename)
 
     output_filename = argv[2] + '.' + tesseract_configfilename
 
     if os.path.isfile(cache_filepath):
-        if verbose:
-            print("Copying OCR result for content of {} from cache {}".format(
-                input_filename, cache_filename))
+        logger.debug("Copying OCR result for content of %s from cache %s",
+                     input_filename, cache_filename)
         # copy cached result to output filename
         shutil.copy(cache_filepath, output_filename)
         return 0
 
-    if verbose:
-        print("OCR result not in cache, running "
-              "Tesseract OCR by arguments {}".format(argv))
+    logger.debug("OCR result not in cache, running "
+                 "Tesseract OCR by arguments %s", argv)
 
     # run tesseract and copy output file to cache
     result_code = subprocess.call(argv)
 
-    if verbose:
-        print("Copying OCR result {} to cache {}".format(
-            output_filename, cache_dir + cache_filename))
+    logger.debug("Copying OCR result %s to cache %s",
+                 output_filename, cache_dir + cache_filename)
 
     shutil.copy(output_filename, cache_filepath)
 

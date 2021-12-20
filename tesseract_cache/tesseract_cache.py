@@ -33,7 +33,7 @@ def get_cache_filename(filename,
     """calc filename in cache dir by file content and tesseract
     options (hashes),
     not filename so cache will be used, too if multiple files of the same image
-    and if using temprorary filenames like Tika-Server
+    and if using temporary filenames like Tika-Server
     """
 
     # hash of file content
@@ -243,7 +243,7 @@ if __name__ == "__main__":
 
     # read command line parameters
     _argv = sys.argv
-    # since runned on command line instead beeing used as Python library
+    # since running on command line instead being used as Python library
     # the option argv[0] is not tesseract command but this wrapper
     # so change in new argv for OCR the command parameter to real tesseract
     _argv[0] = 'tesseract'

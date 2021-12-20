@@ -20,8 +20,7 @@ def tesseract_cli_wrapper(argv,
         cache_dir = os.getenv('TESSERACT_CACHE_DIR')
 
     (input_filename, tesseract_configfilename,
-     cache_filename) = tesseract_cache.parse_tesseract_parameters(
-        argv, verbose=verbose)
+     cache_filename) = tesseract_cache.parse_tesseract_parameters(argv)
 
     output_filename = argv[2] + '.' + tesseract_configfilename
 
